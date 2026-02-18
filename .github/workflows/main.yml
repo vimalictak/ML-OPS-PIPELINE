@@ -1,5 +1,6 @@
 name: MLOps CI/CD Pipeline
 
+# Trigger this workflow every time code is pushed to the 'main' branch
 on:
   push:
     branches: [ "main" ]
@@ -7,8 +8,11 @@ on:
     branches: [ "main" ]
 
 jobs:
-  # Job 1: Test the API and Model
+  # ==========================================
+  # STAGE 1: TEST
+  # ==========================================
   test-api:
+    name: Run Pytest
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -25,13 +29,17 @@ jobs:
           pip install pytest httpx
           pip install -r requirements.txt
 
-      - name: Run Pytest
+      - name: Run Automated Tests
+        # Using the magic command to ensure the 'app' module is found!
         run: |
           python -m pytest tests/
 
-  # Job 2: Build and Push Docker Container
+  # ==========================================
+  # STAGE 2 & 3: BUILD AND PUSH
+  # ==========================================
   build-and-push:
-    needs: test-api 
+    name: Build & Push Docker Image
+    needs: test-api # CRITICAL: This stops the build if the tests fail!
     runs-on: ubuntu-latest
     
     steps:
@@ -44,10 +52,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push Docker Image
+      - name: Build and Push to Docker Hub
         uses: docker/build-push-action@v5
         with:
           context: .
           push: true
-          # Make sure to replace YOUR_DOCKER_USERNAME below with your actual username!
-          tags: ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
+          # Hardcoded to your exact Docker Hub profile to prevent typo errors
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
+            ${{ secrets.DOCKER_USERNAME }}iris-model-api:${{ github.sha }}
