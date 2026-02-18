@@ -1,0 +1,11 @@
+# Environments
+venv/
+env/
+
+# Python Cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# (Optional) If you were using a massive model, you would ignore it here. 
+# For this tutorial, we WILL let Git push model.pkl so the Docker build has it.
