@@ -1,6 +1,5 @@
 name: MLOps CI/CD Pipeline
 
-# Trigger this workflow every time code is pushed to the 'main' branch
 on:
   push:
     branches: [ "main" ]
@@ -30,21 +29,52 @@ jobs:
           pip install -r requirements.txt
 
       - name: Run Automated Tests
-        # Using the magic command to ensure the 'app' module is found!
         run: |
           python -m pytest tests/
 
   # ==========================================
-  # STAGE 2 & 3: BUILD AND PUSH
+  # STAGE 2: BUILD
   # ==========================================
-  build-and-push:
-    name: Build & Push Docker Image
-    needs: test-api # CRITICAL: This stops the build if the tests fail!
+  build-image:
+    name: Build Image
+    needs: test-api
     runs-on: ubuntu-latest
-    
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+
+      # We use raw Docker CLI commands here instead of the pre-built action
+      - name: Build Docker Image
+        run: |
+          docker build -t iris-model-api .
+
+      - name: Save Docker Image as Tarball
+        run: |
+          docker save -o iris-model-api.tar iris-model-api
+
+      - name: Upload Image as GitHub Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-artifact
+          path: iris-model-api.tar
+          retention-days: 1 # We only keep it for 1 day to save GitHub storage space
+
+  # ==========================================
+  # STAGE 3: PUSH
+  # ==========================================
+  push-image:
+    name: Push to Docker Hub
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-artifact
+
+      - name: Load Docker Image
+        run: |
+          docker load -i iris-model-api.tar
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -52,13 +82,12 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Build and Push to Docker Hub
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          # Hardcoded to your exact Docker Hub profile to prevent typo errors
-          # Notice the slash between the username and the image name!
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
-            ${{ secrets.DOCKER_USERNAME }}/iris-model-api:${{ github.sha }}
+      - name: Tag and Push Image
+        run: |
+          # Tag the image with your Docker Hub username
+          docker tag iris-model-api ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
+          docker tag iris-model-api ${{ secrets.DOCKER_USERNAME }}/iris-model-api:${{ github.sha }}
+
+          # Push both tags to the cloud
+          docker push ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/iris-model-api:${{ github.sha }}
