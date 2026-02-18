@@ -50,4 +50,4 @@ jobs:
           context: .
           push: true
           # Make sure to replace YOUR_DOCKER_USERNAME below with your actual username!
-          tags: YOUR_DOCKER_USERNAME/iris-model-api:latest
+          tags: vimalprakask1999/iris-model-api:latest
