@@ -58,6 +58,7 @@ jobs:
           context: .
           push: true
           # Hardcoded to your exact Docker Hub profile to prevent typo errors
+          # Notice the slash between the username and the image name!
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
-            ${{ secrets.DOCKER_USERNAME }}iris-model-api:${{ github.sha }}
+            ${{ secrets.DOCKER_USERNAME }}/iris-model-api:${{ github.sha }}
