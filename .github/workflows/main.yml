@@ -43,7 +43,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # We use raw Docker CLI commands here instead of the pre-built action
       - name: Build Docker Image
         run: |
           docker build -t iris-model-api .
@@ -57,7 +56,7 @@ jobs:
         with:
           name: docker-image-artifact
           path: iris-model-api.tar
-          retention-days: 1 # We only keep it for 1 day to save GitHub storage space
+          retention-days: 1 
 
   # ==========================================
   # STAGE 3: PUSH
@@ -66,6 +65,7 @@ jobs:
     name: Push to Docker Hub
     needs: build-image
     runs-on: ubuntu-latest
+    environment: production  # This triggers the manual approval pause!
     steps:
       - name: Download Image Artifact
         uses: actions/download-artifact@v4
@@ -84,10 +84,8 @@ jobs:
 
       - name: Tag and Push Image
         run: |
-          # Tag the image with your Docker Hub username
           docker tag iris-model-api ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
           docker tag iris-model-api ${{ secrets.DOCKER_USERNAME }}/iris-model-api:${{ github.sha }}
 
-          # Push both tags to the cloud
           docker push ${{ secrets.DOCKER_USERNAME }}/iris-model-api:latest
           docker push ${{ secrets.DOCKER_USERNAME }}/iris-model-api:${{ github.sha }}
